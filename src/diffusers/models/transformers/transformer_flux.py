@@ -38,22 +38,22 @@ logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 def rope(pos: torch.Tensor, dim: int, theta: int) -> torch.Tensor:
     assert dim % 2 == 0, "The dimension must be even."
 
-    if str(pos.device).startswith("cuda"):
-        dtype = torch.float64
+    if str(pos.device).startswith("mps"):
+        device = torch.device("cpu")
     else:
-        dtype = torch.float32
+        device = pos.device
 
-    scale = torch.arange(0, dim, 2, dtype=dtype, device=pos.device) / dim
+    scale = torch.arange(0, dim, 2, dtype=dtype, device=device) / dim
     omega = 1.0 / (theta**scale)
 
     batch_size, seq_length = pos.shape
-    out = torch.einsum("...n,d->...nd", pos, omega)
+    out = torch.einsum("...n,d->...nd", pos.to(dtype=torch.float32, device=device), omega)
     cos_out = torch.cos(out)
     sin_out = torch.sin(out)
 
     stacked_out = torch.stack([cos_out, -sin_out, sin_out, cos_out], dim=-1)
     out = stacked_out.view(batch_size, -1, dim // 2, 2, 2)
-    return out.float()
+    return out.to(dtype=torch.float32, device=pos.device)
 
 
 # YiYi to-do: refactor rope related functions/classes
