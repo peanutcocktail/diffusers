@@ -38,7 +38,12 @@ logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 def rope(pos: torch.Tensor, dim: int, theta: int) -> torch.Tensor:
     assert dim % 2 == 0, "The dimension must be even."
 
-    scale = torch.arange(0, dim, 2, dtype=torch.float64, device=pos.device) / dim
+    if str(pos.device).startswith("cuda"):
+        dtype = torch.float64
+    else:
+        dtype = torch.float32
+
+    scale = torch.arange(0, dim, 2, dtype=dtype, device=pos.device) / dim
     omega = 1.0 / (theta**scale)
 
     batch_size, seq_length = pos.shape
